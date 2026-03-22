@@ -1,8 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { ChevronLeft, ChevronRight, HelpCircle, CheckCircle2, ArrowLeft } from 'lucide-react';
+import { ChevronLeft, ChevronRight, HelpCircle, CheckCircle2, ArrowLeft, Save } from 'lucide-react';
 import ChatAssistant from './ChatAssistant';
 import { ChildProfile } from '@/hooks/use-profiles';
 import { scales } from '@/lib/scales';
@@ -19,9 +19,33 @@ export default function Questionnaire({ profile, scaleId, onComplete, onCancel }
   const [answers, setAnswers] = useState<Record<number, number>>({});
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [isFinished, setIsFinished] = useState(false);
+  const [showSavedToast, setShowSavedToast] = useState(false);
 
   const scale = scales.find(s => s.id === scaleId) || scales[0];
   const questions = scale.questions;
+  const storageKey = `questionnaire_progress_${profile.id}_${scaleId}`;
+
+  // Load saved progress on mount
+  useEffect(() => {
+    const saved = localStorage.getItem(storageKey);
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        if (parsed.answers) setAnswers(parsed.answers);
+        if (parsed.currentIndex !== undefined) setCurrentIndex(parsed.currentIndex);
+      } catch (e) {
+        console.error('Failed to parse saved progress', e);
+      }
+    }
+  }, [storageKey]);
+
+  // Save progress whenever answers or currentIndex changes
+  useEffect(() => {
+    if (Object.keys(answers).length > 0) {
+      localStorage.setItem(storageKey, JSON.stringify({ answers, currentIndex }));
+    }
+  }, [answers, currentIndex, storageKey]);
 
   const currentQuestion = questions[currentIndex];
   const progress = ((currentIndex) / questions.length) * 100;
@@ -49,13 +73,13 @@ export default function Questionnaire({ profile, scaleId, onComplete, onCancel }
       setCurrentIndex(prev => Math.min(prev + 1, questions.length - 1));
     } else {
       setIsFinished(true);
+      // Clear saved progress upon completion
+      localStorage.removeItem(storageKey);
+      
       // Calculate total score considering weights if they exist
       const score = Object.entries(answers).reduce((total, [questionId, value]) => {
         const question = questions.find(q => q.id === Number(questionId));
         if (question && question.weight !== undefined && value > 0) {
-          // If value is 1 (or greater), we multiply by weight. 
-          // For ABC scale, value is 1 for 'Yes', so value * weight = weight.
-          // For other scales without weight, it just adds the value.
           return total + (value * question.weight);
         }
         return total + value;
@@ -68,6 +92,12 @@ export default function Questionnaire({ profile, scaleId, onComplete, onCancel }
     if (currentIndex > 0) {
       setCurrentIndex(prev => prev - 1);
     }
+  };
+
+  const handleManualSave = () => {
+    localStorage.setItem(storageKey, JSON.stringify({ answers, currentIndex }));
+    setShowSavedToast(true);
+    setTimeout(() => setShowSavedToast(false), 2000);
   };
 
   if (isFinished) {
@@ -108,9 +138,30 @@ export default function Questionnaire({ profile, scaleId, onComplete, onCancel }
             </button>
             <h1 className="text-lg font-medium text-slate-800">{scale.shortName}</h1>
           </div>
-          <span className="text-sm font-medium text-indigo-600 bg-indigo-50 px-3 py-1 rounded-full">
-            {currentIndex + 1} / {questions.length}
-          </span>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={handleManualSave}
+              className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-full transition-colors relative"
+              title="保存进度"
+            >
+              <Save size={20} />
+              <AnimatePresence>
+                {showSavedToast && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10, scale: 0.8 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.8 }}
+                    className="absolute -bottom-8 left-1/2 -translate-x-1/2 whitespace-nowrap bg-slate-800 text-white text-xs py-1 px-2 rounded"
+                  >
+                    已保存
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </button>
+            <span className="text-sm font-medium text-indigo-600 bg-indigo-50 px-3 py-1 rounded-full">
+              {currentIndex + 1} / {questions.length}
+            </span>
+          </div>
         </div>
         <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
           <motion.div 

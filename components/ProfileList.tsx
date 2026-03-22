@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { ChildProfile, AssessmentResult } from '@/hooks/use-profiles';
 import { motion, AnimatePresence } from 'motion/react';
-import { Plus, User, Calendar, FileText, ChevronRight, Edit2, Trash2, X, Info, Clock, Settings as SettingsIcon } from 'lucide-react';
+import { Plus, User, Calendar, FileText, ChevronRight, Edit2, Trash2, X, Info } from 'lucide-react';
 import { scales } from '@/lib/scales';
 
 interface ProfileListProps {
@@ -14,11 +14,9 @@ interface ProfileListProps {
   onDelete: (id: string) => void;
   onSelect: (profileId: string, scaleId: string) => void;
   onViewReport: (id: string) => void;
-  onViewTimeline: (id: string) => void;
-  onOpenSettings: () => void;
 }
 
-export default function ProfileList({ profiles, results, onAdd, onEdit, onDelete, onSelect, onViewReport, onViewTimeline, onOpenSettings }: ProfileListProps) {
+export default function ProfileList({ profiles, results, onAdd, onEdit, onDelete, onSelect, onViewReport }: ProfileListProps) {
   const [selectedProfileId, setSelectedProfileId] = useState<string | null>(null);
 
   const handleStartAssessment = (profileId: string) => {
@@ -34,18 +32,9 @@ export default function ProfileList({ profiles, results, onAdd, onEdit, onDelete
 
   return (
     <div className="min-h-[100dvh] bg-slate-50 flex flex-col max-w-md mx-auto relative shadow-2xl">
-      <header className="pt-12 pb-6 px-6 bg-white z-10 relative border-b border-slate-100 flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold text-slate-800">儿童档案</h1>
-          <p className="text-slate-500 mt-1 text-sm">选择一个档案开始评估，或添加新档案</p>
-        </div>
-        <button
-          onClick={onOpenSettings}
-          className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-full transition-colors"
-          title="AI 设置"
-        >
-          <SettingsIcon size={20} />
-        </button>
+      <header className="pt-12 pb-6 px-6 bg-white z-10 relative border-b border-slate-100">
+        <h1 className="text-2xl font-semibold text-slate-800">儿童档案</h1>
+        <p className="text-slate-500 mt-1 text-sm">选择一个档案开始评估，或添加新档案</p>
       </header>
 
       <main className="flex-1 px-6 py-6 overflow-y-auto">
@@ -118,21 +107,12 @@ export default function ProfileList({ profiles, results, onAdd, onEdit, onDelete
                     </div>
                     <div className="flex gap-3">
                       {profileResults.length > 0 && (
-                        <>
-                          <button
-                            onClick={() => onViewTimeline(profile.id)}
-                            className="flex items-center gap-1 text-sm font-medium text-slate-600 hover:text-slate-800"
-                          >
-                            <Clock size={14} />
-                            时间线
-                          </button>
-                          <button
-                            onClick={() => onViewReport(profile.id)}
-                            className="flex items-center gap-1 text-sm font-medium text-slate-600 hover:text-slate-800"
-                          >
-                            查看报告
-                          </button>
-                        </>
+                        <button
+                          onClick={() => onViewReport(profile.id)}
+                          className="flex items-center gap-1 text-sm font-medium text-slate-600 hover:text-slate-800"
+                        >
+                          查看报告
+                        </button>
                       )}
                       <button
                         onClick={() => handleStartAssessment(profile.id)}
@@ -194,6 +174,7 @@ export default function ProfileList({ profiles, results, onAdd, onEdit, onDelete
                     <li><strong>SRS量表：</strong>全面、深入评估社交障碍的严重程度。</li>
                     <li><strong>SNAP-IV量表：</strong>筛查注意力缺陷及多动/冲动行为。</li>
                     <li><strong>ABC量表：</strong>筛查和评估儿童孤独症的严重程度。</li>
+                    <li><strong>CARS量表：</strong>评估和诊断儿童孤独症的严重程度。</li>
                   </ul>
                 </div>
                 

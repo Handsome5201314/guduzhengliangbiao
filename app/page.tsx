@@ -6,13 +6,11 @@ import ProfileList from '@/components/ProfileList';
 import ProfileForm from '@/components/ProfileForm';
 import Questionnaire from '@/components/Questionnaire';
 import AssessmentReport from '@/components/AssessmentReport';
-import TimelineView from '@/components/TimelineView';
-import Settings from '@/components/Settings';
-import { Loader2, Settings as SettingsIcon } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 
 export default function Home() {
   const { profiles, results, saveProfile, deleteProfile, saveResult, isLoaded } = useProfiles();
-  const [currentView, setCurrentView] = useState<'list' | 'form' | 'assessment' | 'report' | 'timeline' | 'settings'>('list');
+  const [currentView, setCurrentView] = useState<'list' | 'form' | 'assessment' | 'report'>('list');
   const [editingProfile, setEditingProfile] = useState<ChildProfile | null>(null);
   const [activeProfileId, setActiveProfileId] = useState<string | null>(null);
   const [activeScaleId, setActiveScaleId] = useState<string | null>(null);
@@ -52,24 +50,10 @@ export default function Home() {
     const profileResults = results.filter(r => r.profileId === id);
     if (profileResults.length > 0) {
       // Get the most recent result
-      const latestResult = profileResults.reduce((latest, current) =>
+      const latestResult = profileResults.reduce((latest, current) => 
         current.date > latest.date ? current : latest
       );
       setCurrentResult(latestResult);
-      setCurrentView('report');
-    }
-  };
-
-  const handleViewTimeline = (profileId: string) => {
-    setActiveProfileId(profileId);
-    setCurrentView('timeline');
-  };
-
-  const handleViewResultFromTimeline = (result: AssessmentResult) => {
-    const profile = profiles.find(p => p.id === result.profileId);
-    if (profile) {
-      setActiveProfileId(profile.id);
-      setCurrentResult(result);
       setCurrentView('report');
     }
   };
@@ -95,7 +79,7 @@ export default function Home() {
   return (
     <main className="min-h-[100dvh] bg-slate-50">
       {currentView === 'list' && (
-        <ProfileList
+        <ProfileList 
           profiles={profiles}
           results={results}
           onAdd={handleAddProfile}
@@ -103,8 +87,6 @@ export default function Home() {
           onDelete={deleteProfile}
           onSelect={handleSelectProfile}
           onViewReport={handleViewReport}
-          onViewTimeline={handleViewTimeline}
-          onOpenSettings={() => setCurrentView('settings')}
         />
       )}
       
@@ -126,26 +108,11 @@ export default function Home() {
       )}
 
       {currentView === 'report' && activeProfile && currentResult && (
-        <AssessmentReport
+        <AssessmentReport 
           profile={activeProfile}
           result={currentResult}
-          allResults={results.filter(r => r.profileId === activeProfile.id)}
           onClose={() => setCurrentView('list')}
-          onViewTimeline={() => setCurrentView('timeline')}
         />
-      )}
-
-      {currentView === 'timeline' && activeProfile && (
-        <TimelineView
-          profile={activeProfile}
-          results={results.filter(r => r.profileId === activeProfile.id)}
-          onViewResult={handleViewResultFromTimeline}
-          onBack={() => setCurrentView('list')}
-        />
-      )}
-
-      {currentView === 'settings' && (
-        <Settings onBack={() => setCurrentView('list')} />
       )}
     </main>
   );
