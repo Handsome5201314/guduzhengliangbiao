@@ -1,0 +1,106 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// 1. 三角色枚举 (SQLite doesn't support enums natively, so we use String)
+// Role: ADMIN, DOCTOR, PATIENT
+
+// 2. 医患匹配状态机枚举
+// MatchStatus: PENDING_DOCTOR, PENDING_PATIENT, MATCHED, REJECTED, UNBOUND
+
+// 3. 用户主表 (三角色共用)
+model User {
+  id            String   @id @default(cuid())
+  role          String   @default("PATIENT")
+  phone         String?  @unique
+  passwordHash  String
+  name          String?
+  createdAt     DateTime @default(now())
+
+  // 关联关系
+  patientProfiles PatientProfile[]   // 【家长】名下的多个患者(孩子)档案
+  departments     DoctorDepartment[] // 【医生】所属的科室关联表
+  
+  // 匹配记录关联
+  doctorMatches   DoctorPatientMatch[] @relation("DoctorMatches")
+}
+
+// 4. 多患者档案表 (一个家长可以有多个孩子)
+model PatientProfile {
+  id          String   @id @default(cuid())
+  parentId    String   // 关联到 User(Role=PATIENT)
+  name        String
+  age         Int
+  gender      String
+  basicInfo   String?
+  createdAt   DateTime @default(now())
+
+  parent      User     @relation(fields: [parentId], references: [id])
+  
+  // 该患者的量表记录和匹配记录
+  assessments AssessmentResult[]
+  matches     DoctorPatientMatch[]
+}
+
+// 5. 科室表
+model Department {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
+  doctors     DoctorDepartment[]
+}
+
+// 6. 医生-科室 多对多关联表
+model DoctorDepartment {
+  doctorId     String
+  departmentId String
+  doctor       User       @relation(fields: [doctorId], references: [id])
+  department   Department @relation(fields: [departmentId], references: [id])
+
+  @@id([doctorId, departmentId])
+}
+
+// 7. 医患双向匹配状态表 (核心数据隔离边界)
+model DoctorPatientMatch {
+  id               String         @id @default(cuid())
+  doctorId         String         // 关联到 User(Role=DOCTOR)
+  patientProfileId String         // 关联到具体的患者档案，而不是家长
+  status           String         @default("PENDING_DOCTOR")
+  initiatedByRole  String         // 记录是谁发起的匹配 (DOCTOR 或 PATIENT)
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  doctor           User           @relation("DoctorMatches", fields: [doctorId], references: [id])
+  patientProfile   PatientProfile @relation(fields: [patientProfileId], references: [id])
+  
+  @@unique([doctorId, patientProfileId]) // 确保同一个医生和同一个患者之间只有一条活跃的匹配记录
+}
+
+// 8. 全局 API 密钥配置表 (仅管理员可操作)
+model SystemConfig {
+  id          String   @id @default(cuid())
+  keyName     String   @unique  // 例如: 'SOPHGO_API_KEY', 'SILICONFLOW_API_KEY'
+  keyValue    String   // 必须加密存储！
+  description String?
+  updatedAt   DateTime @updatedAt
+}
+
+// 9. 量表结果表 (补充)
+model AssessmentResult {
+  id               String   @id @default(cuid())
+  patientProfileId String
+  scaleId          String
+  score            Int
+  answers          String   // SQLite doesn't support JSON natively in Prisma, use String
+  createdAt        DateTime @default(now())
+
+  patientProfile   PatientProfile @relation(fields: [patientProfileId], references: [id])
+}
