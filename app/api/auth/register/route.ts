@@ -35,13 +35,14 @@ export async function POST(req: Request) {
     const cookieStore = await cookies();
     cookieStore.set('session', session, { 
       httpOnly: true, 
-      secure: process.env.NODE_ENV === 'production', 
-      sameSite: 'lax', 
+      secure: true, 
+      sameSite: 'none', 
       path: '/' 
     });
 
     return NextResponse.json({ 
       success: true, 
+      token: session,
       user: { id: user.id, role: user.role, name: user.name } 
     });
   } catch (error) {

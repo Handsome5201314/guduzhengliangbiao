@@ -12,7 +12,9 @@ import {
   FileText, 
   UserRound,
   Loader2,
-  AlertCircle
+  AlertCircle,
+  UserPlus,
+  ClipboardList
 } from 'lucide-react';
 import { motion } from 'motion/react';
 
@@ -51,7 +53,12 @@ export default function DoctorDashboard() {
 
   const fetchDashboardData = async () => {
     try {
-      const res = await fetch('/api/doctor/dashboard');
+      const token = localStorage.getItem('token');
+      const res = await fetch('/api/doctor/dashboard', {
+        headers: {
+          'Authorization': token ? `Bearer ${token}` : ''
+        }
+      });
       if (res.status === 401) {
         router.push('/login');
         return;
@@ -70,6 +77,7 @@ export default function DoctorDashboard() {
 
   const handleLogout = async () => {
     try {
+      localStorage.removeItem('token');
       await fetch('/api/auth/logout', { method: 'POST' });
       router.push('/login');
     } catch (err) {
@@ -80,9 +88,13 @@ export default function DoctorDashboard() {
   const handleMatchAction = async (matchId: string, action: 'ACCEPT' | 'REJECT') => {
     setActionLoadingId(matchId);
     try {
+      const token = localStorage.getItem('token');
       const res = await fetch(`/api/doctor/match/${matchId}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': token ? `Bearer ${token}` : ''
+        },
         body: JSON.stringify({ action }),
       });
 
@@ -134,6 +146,35 @@ export default function DoctorDashboard() {
             {error}
           </div>
         )}
+
+        {/* Quick Actions */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <button 
+            onClick={() => router.push('/profile/new')}
+            className="bg-emerald-600 text-white rounded-2xl p-6 shadow-sm hover:bg-emerald-700 transition-colors flex items-center justify-between group text-left"
+          >
+            <div>
+              <h3 className="text-lg font-bold mb-1">创建患儿档案</h3>
+              <p className="text-emerald-100 text-sm">为患者建立新的评估档案</p>
+            </div>
+            <div className="bg-white/20 p-3 rounded-xl group-hover:scale-110 transition-transform">
+              <UserPlus size={24} />
+            </div>
+          </button>
+          
+          <button 
+            onClick={() => router.push('/assessment/select')}
+            className="bg-white border border-slate-200 text-slate-900 rounded-2xl p-6 shadow-sm hover:border-emerald-300 hover:shadow-md transition-all flex items-center justify-between group text-left"
+          >
+            <div>
+              <h3 className="text-lg font-bold mb-1 text-emerald-600">发起量表评估</h3>
+              <p className="text-slate-500 text-sm">选择量表并邀请患者填写</p>
+            </div>
+            <div className="bg-emerald-50 text-emerald-600 p-3 rounded-xl group-hover:scale-110 transition-transform">
+              <ClipboardList size={24} />
+            </div>
+          </button>
+        </div>
 
         {/* Pending Requests Section */}
         <section>

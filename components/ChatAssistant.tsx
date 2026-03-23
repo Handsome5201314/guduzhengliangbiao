@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { GoogleGenAI } from '@google/genai';
 import { X, Send, Bot, User, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import Markdown from 'react-markdown';
@@ -60,14 +59,6 @@ export default function ChatAssistant({ isOpen, onClose, questionText, currentAn
     setIsLoading(true);
 
     try {
-      const ai = new GoogleGenAI({ apiKey: process.env.NEXT_PUBLIC_GEMINI_API_KEY });
-      const chat = ai.chats.create({
-        model: 'gemini-3.1-pro-preview',
-        config: {
-          systemInstruction: SYSTEM_PROMPT,
-        }
-      });
-
       // Provide context to the model silently
       let contextMessage = `当前正在填写的题目是：“${questionText}”。家长目前选择的答案是：${currentAnswerLabel || '尚未选择'}。`;
       if (scaleContext) {
@@ -83,10 +74,25 @@ export default function ChatAssistant({ isOpen, onClose, questionText, currentAn
         }
       }
       contextMessage += `\n家长说：“${userMessage}”。请根据系统指令回复家长。`;
-      
-      const response = await chat.sendMessage({ message: contextMessage });
-      
-      setMessages(prev => [...prev, { role: 'model', content: response.text || '抱歉，我暂时无法回答。' }]);
+
+      const res = await fetch('/api/ai/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          messages: messages, // Send previous history
+          systemPrompt: SYSTEM_PROMPT,
+          contextMessage: contextMessage,
+        }),
+      });
+
+      if (!res.ok) {
+        throw new Error('AI 请求失败');
+      }
+
+      const data = await res.json();
+      setMessages(prev => [...prev, { role: 'model', content: data.text || '抱歉，我暂时无法回答。' }]);
     } catch (error) {
       console.error('Chat error:', error);
       setMessages(prev => [...prev, { role: 'model', content: '抱歉，网络似乎有点问题，请稍后再试。' }]);

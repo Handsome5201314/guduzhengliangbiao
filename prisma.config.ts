@@ -3,12 +3,27 @@
 import "dotenv/config";
 import { defineConfig } from "prisma/config";
 
+const getDbUrl = () => {
+  let url = process.env["SQLITE_URL"] || "file:./dev.db";
+  if (url.startsWith('"') && url.endsWith('"')) {
+    url = url.slice(1, -1);
+  }
+  if (url.startsWith("'") && url.endsWith("'")) {
+    url = url.slice(1, -1);
+  }
+  if (!url.startsWith("file:")) {
+    console.warn(`Invalid SQLITE_URL environment variable: ${url}. Falling back to file:./dev.db`);
+    return "file:./dev.db";
+  }
+  return url;
+};
+
 export default defineConfig({
   schema: "prisma/schema.prisma",
   migrations: {
     path: "prisma/migrations",
   },
   datasource: {
-    url: process.env["DATABASE_URL"] || "file:./dev.db",
+    url: getDbUrl(),
   },
 });

@@ -3,7 +3,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { ChildProfile, AssessmentResult } from '@/hooks/use-profiles';
 import { Download, FileText, ChevronLeft, Loader2, Image as ImageIcon } from 'lucide-react';
-import { GoogleGenAI } from '@google/genai';
 import { toPng, toCanvas } from 'html-to-image';
 import { jsPDF } from 'jspdf';
 import ReactMarkdown from 'react-markdown';
@@ -36,13 +35,7 @@ export default function AssessmentReport({ profile, result, onClose }: Assessmen
   useEffect(() => {
     const generateSuggestions = async () => {
       try {
-        const ai = new GoogleGenAI({ apiKey: process.env.NEXT_PUBLIC_GEMINI_API_KEY });
-        const chat = ai.chats.create({
-          model: 'gemini-3.1-pro-preview',
-          config: {
-            systemInstruction: "你现在是一位拥有20年临床经验的发育行为儿科主治医师，并且是一位极具同理心的沟通专家。你的核心任务是根据儿童的量表得分和基本信息，为家属提供一份易于理解的评估报告和个性化建议。1. 语气要温暖、充满同理心，不带指责，阅读难度不超过小学六年级。2. 严禁使用任何专业医学词汇，严禁直接给出诊断结论（如“孤独症”、“自闭症”等字眼），用“社交沟通发展”、“互动表现”等词汇替代。3. 给出3-4条具体的、生活化的家庭互动建议，帮助家长在日常生活中引导孩子。",
-          }
-        });
+        const systemPrompt = "你现在是一位拥有20年临床经验的发育行为儿科主治医师，并且是一位极具同理心的沟通专家。你的核心任务是根据儿童的量表得分和基本信息，为家属提供一份易于理解的评估报告和个性化建议。1. 语气要温暖、充满同理心，不带指责，阅读难度不超过小学六年级。2. 严禁使用任何专业医学词汇，严禁直接给出诊断结论（如“孤独症”、“自闭症”等字眼），用“社交沟通发展”、“互动表现”等词汇替代。3. 给出3-4条具体的、生活化的家庭互动建议，帮助家长在日常生活中引导孩子。";
 
         let answersText = '';
         scale.questions.forEach(q => {
@@ -67,8 +60,23 @@ ${answersText}
 请根据以上信息，给家长写一段温暖的反馈，并提供3-4条具体的家庭互动建议。使用 Markdown 格式排版。
 `;
 
-        const response = await chat.sendMessage({ message: prompt });
-        setAiSuggestions(response.text || '暂无建议。');
+        const res = await fetch('/api/ai/report', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            prompt: prompt,
+            systemPrompt: systemPrompt,
+          }),
+        });
+
+        if (!res.ok) {
+          throw new Error('AI 请求失败');
+        }
+
+        const data = await res.json();
+        setAiSuggestions(data.text || '暂无建议。');
       } catch (error) {
         console.error('Failed to generate AI suggestions:', error);
         setAiSuggestions('抱歉，生成建议时出现错误，请稍后再试。');

@@ -36,6 +36,10 @@ export default function RegisterPage() {
         throw new Error(data.error || '注册失败');
       }
 
+      if (data.token) {
+        localStorage.setItem('token', data.token);
+      }
+
       // Redirect based on role
       if (data.user.role === 'DOCTOR') {
         router.push('/doctor/dashboard');

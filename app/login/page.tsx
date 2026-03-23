@@ -34,6 +34,10 @@ export default function LoginPage() {
         throw new Error(data.error || '登录失败');
       }
 
+      if (data.token) {
+        localStorage.setItem('token', data.token);
+      }
+
       // Redirect based on role
       if (data.user.role === 'DOCTOR') {
         router.push('/doctor/dashboard');

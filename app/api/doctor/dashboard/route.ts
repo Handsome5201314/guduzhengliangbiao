@@ -2,9 +2,9 @@ import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { getSession } from '@/lib/auth';
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
-    const session = await getSession();
+    const session = await getSession(req);
     if (!session || session.role !== 'DOCTOR') {
       return NextResponse.json({ error: '未授权访问' }, { status: 401 });
     }
